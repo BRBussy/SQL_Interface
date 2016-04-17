@@ -77,10 +77,10 @@ void main(void)
 	sql::Statement  *stmt;   // Create a pointer to a Statement object to hold our SQL commands
 	sql::ResultSet  *res;    // Create a pointer to a ResultSet object to hold the results of any queries we run
 	//Other Program Variables
-	bool Client_Connected = false;
-	bool Data_to_Send = true;
+	//bool Client_Connected = false;
+	bool Schedule_Changed = false;
 	bool New_Data_Received = false;
-	bool Server_Initialised = false;
+	//bool Server_Initialised = false;
 	bool loop = true;
 
 	//--------------SETUP CONNECTION TO DATABASE----------------------
@@ -108,7 +108,7 @@ void main(void)
 	stmt = dbConn->createStatement();
 
 	do {
-		//------------CHECK FOR NEW FRAMES TO DECODE and PROCESS----------
+		//------------CHECK FOR NEW FRAMES TO DECODE and PROCESS----------------------------
 		if (process_received_frames())
 		{
 			try
@@ -124,7 +124,7 @@ void main(void)
 				exit(1);
 			}
 		}
-		//------------CHECK FOR NEW SCHEDULING DATA TO PROCESS-------------
+		//------------CHECK FOR NEW SCHEDULING DATA TO PROCESS------------------------------
 		try
 		{
 			stmt->execute("USE design_db;");
@@ -136,54 +136,97 @@ void main(void)
 			system("pause");
 			exit(1);
 		}
-		
-		scheduling_information device_schedule;
-		//Initialise all to False
-		for (int day = 0; day <= 6; day++) {
-			for (int hour = 0; hour <= 23; hour++) {
-				for (int minute = 0; minute <= 59; minute++) {
-					device_schedule.hours_on_off[day][hour][minute] = false;
-				}
+		while (res->next())  //Iterate through to find Unread
+		{
+			if (res->getInt("Is_Read") == 0) { //If one is Unread, The schedule has been changed
+				cout << "Detected that the Schedule has been changed!!" << endl;
+				Schedule_Changed = true;
+				break;
 			}
 		}
-		while (res->next())
-		{
-			data_base_scheduling_information database_schedule;
-
-			sql::SQLString Time_Start = res->getString("Time_Start");
-			sql::SQLString Time_End = res->getString("Time_End");
-			string Time_Start_String = Time_Start.c_str();
-			string Time_End_String = Time_End.c_str();
-			database_schedule.Time_Start = Time_Start_String;
-			database_schedule.Time_End = Time_End_String;
-			database_schedule.Day = res->getInt("Day");
-			database_schedule.Device_ID = res->getInt("Device_ID");
-			process_schedule_data(device_schedule, database_schedule);
-			
-			//Print Out The Schedule
-			/*if (!res->next()) {
-				for (int day = 0; day <= 6; day++) {
-					cout << "Day " << day << ":" << endl;
-					for (int hour = 0; hour <= 23; hour++) {
-						cout << "Hour " << hour << ":" << endl;
-						for (int minute = 0; minute <= 59; minute++) {
-							cout << device_schedule.hours_on_off[day][hour][minute];
-						}
-						cout << endl;
+		//------------IF there is new Scheduling Data to Process then Process It-------------
+		if (Schedule_Changed) {
+			cout << "Reading and Processing Updated Schedule!" << endl << endl;
+			scheduling_information device_schedule;
+			//Initialise all to False
+			for (int day = 0; day <= 6; day++) {
+				for (int hour = 0; hour <= 23; hour++) {
+					for (int minute = 0; minute <= 59; minute++) {
+						device_schedule.hours_on_off[day][hour][minute] = false;
 					}
 				}
 			}
-			res->previous();*/
-		}
-		loop = false;
+			
+			try
+			{
+				stmt->execute("USE design_db;");
+				res = stmt->executeQuery("SELECT * FROM schedules");
+			}
+			catch (sql::SQLException e)
+			{
+				cout << "SQL error. Error message: " << e.what() << endl;
+				system("pause");
+				exit(1);
+			}
 
-		Sleep(1000);
+			while (res->next())
+			{
+				data_base_scheduling_information database_schedule;
+				sql::SQLString Time_Start = res->getString("Time_Start");
+				sql::SQLString Time_End = res->getString("Time_End");
+				string Time_Start_String = Time_Start.c_str();
+				string Time_End_String = Time_End.c_str();
+				database_schedule.Time_Start = Time_Start_String;
+				database_schedule.Time_End = Time_End_String;
+				database_schedule.Day = res->getInt("Day");
+				database_schedule.Device_ID = res->getInt("Device_ID");
+				process_schedule_data(device_schedule, database_schedule);
+				//Mark Read
+				// UPDATE schedules SET Is_Read = 1 WHERE Day = 1;
+				ostringstream Mark_Read;
+				Mark_Read << "UPDATE schedules SET Is_Read = 1 WHERE "
+					<< "Day = " << database_schedule.Day
+					<< " AND Time_Start = '" << Time_Start_String << "';";
+				try
+				{
+					stmt->execute("USE design_db;");
+					stmt->execute(Mark_Read.str().c_str());
+				}
+				catch (sql::SQLException e)
+				{
+					cout << "SQL error. Error message: " << e.what() << endl;
+					system("pause");
+					exit(1);
+				}
+
+				//Print Out The Schedule
+				/*if (!res->next()) {
+				for (int day = 0; day <= 6; day++) {
+				cout << "Day " << day << ":" << endl;
+				for (int hour = 0; hour <= 23; hour++) {
+				cout << "Hour " << hour << ":" << endl;
+				for (int minute = 0; minute <= 59; minute++) {
+				cout << device_schedule.hours_on_off[day][hour][minute];
+				}
+				cout << endl;
+				}
+				}
+				}
+				res->previous();*/
+			}
+			Schedule_Changed = false;
+		}
+		else {
+			cout << "No Change in Schedule." << endl << endl;
+		}
+		//loop = false;
+		Sleep(2000);
 	} while (loop);
 
 	//Clean up after ourselves
 	delete dbConn;
-	//delete  stmt; 
-	//delete res;
+	delete  stmt; 
+	delete res;
 	exit(1);
 }
 
