@@ -172,8 +172,8 @@ void main(void)
 						cout << endl;
 					}
 				}
-			}*/
-			res->previous();
+			}
+			res->previous();*/
 		}
 		loop = false;
 
@@ -357,6 +357,7 @@ void process_schedule_data(scheduling_information &device_schedule, const data_b
 		&& (Hour_Start <= Hour_End)
 		&& ((((Hour_Start==Hour_End)&&(Minute_Start > Minute_End)))|| (Hour_Start != Hour_End)))
 	{
+		device_schedule.ID = database_schedule.Device_ID;
 		//Make True according to Day Schedule
 		for (int hour = Hour_Start; hour <= Hour_End; hour++)
 		{
@@ -385,5 +386,21 @@ void process_schedule_data(scheduling_information &device_schedule, const data_b
 			}
 		}
 	}
-	device_schedule.ID = database_schedule.Device_ID;
+	else {
+		//cout << "Invalid Database Entry!" << endl;
+		//cout << "Day: " << Day << " Start Time: " << database_schedule.Time_Start << " End Time: " << database_schedule.Time_End << endl;
+		return;
+	}
+
+	//Save Schedule Info To File:
+	ofstream outfile;
+	outfile.open("C:\\Users\\Bernard\\Documents\\Buffer_area\\Scheduling_Info.SI");
+
+	BYTE *ptr_to_Scheduling_info_bytes = (BYTE*)(void*)(&device_schedule);
+	for (int i = 0; i < sizeof(device_schedule); i++)
+	{
+		outfile << ptr_to_Scheduling_info_bytes[i];
+	}
+	outfile.close(); //close the file.
+	
 }
