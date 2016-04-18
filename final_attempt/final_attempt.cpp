@@ -199,7 +199,7 @@ void main(void)
 				}
 
 				//Print Out The Schedule
-				/*if (!res->next()) {
+				if (!res->next()) {
 				for (int day = 0; day <= 6; day++) {
 				cout << "Day " << day << ":" << endl;
 				for (int hour = 0; hour <= 23; hour++) {
@@ -211,7 +211,7 @@ void main(void)
 				}
 				}
 				}
-				res->previous();*/
+				res->previous();
 			}
 			Schedule_Changed = false;
 		}
@@ -394,7 +394,7 @@ void process_schedule_data(scheduling_information &device_schedule, const data_b
 		&& ((Minute_Start <= 59) && (Minute_Start >= 0))
 		&& ((Minute_End <= 59) && (Minute_End >= 0))
 		&& (Hour_Start <= Hour_End)
-		&& ((((Hour_Start==Hour_End)&&(Minute_Start > Minute_End)))|| (Hour_Start != Hour_End)))
+		&& ((((Hour_Start==Hour_End)&&(Minute_Start <= Minute_End)))|| (Hour_Start != Hour_End)))
 	{
 		device_schedule.ID = database_schedule.Device_ID;
 		//Make True according to Day Schedule
