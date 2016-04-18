@@ -70,7 +70,6 @@ void process_schedule_data(scheduling_information &device_schedule, const data_b
 
 void main(void)
 {
-	
 	//MySQL Database Access Variables
 	sql::Driver     *driver; // Create a pointer to a MySQL driver object
 	sql::Connection *dbConn; // Create a pointer to a database connection object
@@ -220,7 +219,7 @@ void main(void)
 			cout << "No Change in Schedule." << endl << endl;
 		}
 		//loop = false;
-		Sleep(2000);
+		Sleep(500);
 	} while (loop);
 
 	//Clean up after ourselves
@@ -325,8 +324,6 @@ bool process_received_frames(void)
 	
 	return 0;
 }
-
-
 BYTE *read_Payload(const string &filename, const int &no_of_bytes_in_payload)
 {
 	BYTE *Data_Payload = NULL;
@@ -383,7 +380,6 @@ void process_received_power_reading(const power_measurement &measurement_receive
 		<< "'" << measurement_received.measurement << "');";
 	stmt_string = conversion_stream.str();
 }
-
 void process_schedule_data(scheduling_information &device_schedule, const data_base_scheduling_information &database_schedule)
 {
 	int Hour_Start = stoi(database_schedule.Time_Start.substr(0, 2));
@@ -437,7 +433,7 @@ void process_schedule_data(scheduling_information &device_schedule, const data_b
 
 	//Save Schedule Info To File:
 	ofstream outfile;
-	outfile.open("C:\\Users\\Bernard\\Documents\\Buffer_area\\Scheduling_Info.SI");
+	outfile.open("C:\\Users\\Bernard\\Documents\\Buffer_area\\Send_to_Client\\Scheduling_Info.SI");
 
 	BYTE *ptr_to_Scheduling_info_bytes = (BYTE*)(void*)(&device_schedule);
 	for (int i = 0; i < sizeof(device_schedule); i++)
