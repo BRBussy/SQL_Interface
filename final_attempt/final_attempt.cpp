@@ -32,7 +32,7 @@ struct scheduling_information { //Declare scheduling_information struct type
 struct data_base_scheduling_information {//Declare data_base_scheduling_information struct type
 	string Time_Start;
 	string Time_End;
-	int Day;
+	string Day;
 	int Device_ID;
 };
 //Time and Date Structure
@@ -66,7 +66,8 @@ bool process_received_frames(void);
 BYTE *read_Payload(const string &filename, const int &no_of_bytes_in_payload);
 template <class T> void rebuild_received_data(BYTE *Data_Payload, const int &Num_Bytes_in_Payload, T& rebuilt_variable);
 void process_received_power_reading(const power_measurement &measurement_received);
-void process_schedule_data(scheduling_information &device_schedule, const data_base_scheduling_information &database_schedule);
+void process_schedule_data(const data_base_scheduling_information &database_schedule);
+char day_number(const string &day);
 
 void main(void)
 {
@@ -78,6 +79,7 @@ void main(void)
 	//Other Program Variables
 	//bool Client_Connected = false;
 	bool Schedule_Changed = false;
+	int no_of_entries;
 	bool New_Data_Received = false;
 	//bool Server_Initialised = false;
 	bool loop = true;
@@ -146,15 +148,6 @@ void main(void)
 		//------------IF there is new Scheduling Data to Process then Process It-------------
 		if (Schedule_Changed) {
 			cout << "Reading and Processing Updated Schedule!" << endl << endl;
-			scheduling_information device_schedule;
-			//Initialise all to False
-			for (int day = 0; day <= 6; day++) {
-				for (int hour = 0; hour <= 23; hour++) {
-					for (int minute = 0; minute <= 59; minute++) {
-						device_schedule.hours_on_off[day][hour][minute] = false;
-					}
-				}
-			}
 			
 			try
 			{
@@ -173,18 +166,21 @@ void main(void)
 				data_base_scheduling_information database_schedule;
 				sql::SQLString Time_Start = res->getString("Time_Start");
 				sql::SQLString Time_End = res->getString("Time_End");
+				sql::SQLString Day = res->getString("Day");
 				string Time_Start_String = Time_Start.c_str();
 				string Time_End_String = Time_End.c_str();
+				string Day_String = Day.c_str();
+
 				database_schedule.Time_Start = Time_Start_String;
 				database_schedule.Time_End = Time_End_String;
-				database_schedule.Day = res->getInt("Day");
+				database_schedule.Day = Day_String;
 				database_schedule.Device_ID = res->getInt("Device_ID");
-				process_schedule_data(device_schedule, database_schedule);
+				process_schedule_data(database_schedule);
 				//Mark Read
 				// UPDATE schedules SET Is_Read = 1 WHERE Day = 1;
 				ostringstream Mark_Read;
 				Mark_Read << "UPDATE schedules SET Is_Read = 1 WHERE "
-					<< "Day = " << database_schedule.Day
+					<< "Day = '" << database_schedule.Day << "'"
 					<< " AND Time_Start = '" << Time_Start_String << "';";
 				try
 				{
@@ -197,26 +193,12 @@ void main(void)
 					system("pause");
 					exit(1);
 				}
-
-				//Print Out The Schedule
-				if (!res->next()) {
-				for (int day = 0; day <= 6; day++) {
-				cout << "Day " << day << ":" << endl;
-				for (int hour = 0; hour <= 23; hour++) {
-				cout << "Hour " << hour << ":" << endl;
-				for (int minute = 0; minute <= 59; minute++) {
-				cout << device_schedule.hours_on_off[day][hour][minute];
-				}
-				cout << endl;
-				}
-				}
-				}
-				res->previous();
 			}
 			Schedule_Changed = false;
 		}
-		else {
-			cout << "No Change in Schedule." << endl << endl;
+		else 
+		{
+			cout << "No Change in Schedule." << endl;
 		}
 		//loop = false;
 		Sleep(500);
@@ -380,66 +362,106 @@ void process_received_power_reading(const power_measurement &measurement_receive
 		<< "'" << measurement_received.measurement << "');";
 	stmt_string = conversion_stream.str();
 }
-void process_schedule_data(scheduling_information &device_schedule, const data_base_scheduling_information &database_schedule)
+void process_schedule_data(const data_base_scheduling_information &database_schedule)
 {
-	int Hour_Start = stoi(database_schedule.Time_Start.substr(0, 2));
-	int Hour_End = stoi(database_schedule.Time_End.substr(0, 2));
-	int Minute_Start = stoi(database_schedule.Time_Start.substr(3, 4));
-	int Minute_End = stoi(database_schedule.Time_End.substr(3, 4));
-	int Day = database_schedule.Day;
+	//cout << database_schedule.Day << endl;
+	//cout << database_schedule.Time_Start << endl;
+	//cout << database_schedule.Time_End << endl;
 	
-	if (((Day <= 6) && (Day >= 0))
-		&& ((Hour_Start <= 23) && (Hour_Start >= 0))
-		&& ((Hour_End <= 23) && (Hour_End >= 0))
-		&& ((Minute_Start <= 59) && (Minute_Start >= 0))
-		&& ((Minute_End <= 59) && (Minute_End >= 0))
-		&& (Hour_Start <= Hour_End)
-		&& ((((Hour_Start==Hour_End)&&(Minute_Start <= Minute_End)))|| (Hour_Start != Hour_End)))
-	{
-		device_schedule.ID = database_schedule.Device_ID;
-		//Make True according to Day Schedule
-		for (int hour = Hour_Start; hour <= Hour_End; hour++)
-		{
-			if (Hour_Start != Hour_End) {
-				if (hour == Hour_Start) {
-					for (int minute = Minute_Start; minute <= 59; minute++) {
-						device_schedule.hours_on_off[Day][hour][minute] = true;
-					}
-				}
-				else if (hour == Hour_End) {
-					for (int minute = 0; minute <= Minute_End; minute++)
-					{
-						device_schedule.hours_on_off[Day][hour][minute] = true;
-					}
-				}
-				else { //Hour_Start < hour < Hour_End
-					for (int minute = 0; minute <= 59; minute++) {
-						device_schedule.hours_on_off[Day][hour][minute] = true;
-					}
-				}
-			}
-			else { //Hour_Start == Hour_End
-				for (int minute = Minute_Start; minute <= Minute_End; minute++) {
-					device_schedule.hours_on_off[Day][hour][minute] = true;
-				}
-			}
-		}
-	}
-	else {
-		//cout << "Invalid Database Entry!" << endl;
-		//cout << "Day: " << Day << " Start Time: " << database_schedule.Time_Start << " End Time: " << database_schedule.Time_End << endl;
-		return;
-	}
+	char *schedule = NULL;
+	schedule = (char*)realloc(schedule, 10*sizeof(char));
 
+	schedule[0] = 'S';
+	schedule[1] = day_number(database_schedule.Day);
+	schedule[2] = (database_schedule.Time_Start.c_str())[0];
+	schedule[3] = (database_schedule.Time_Start.c_str())[1];
+	schedule[4] = (database_schedule.Time_Start.c_str())[3];
+	schedule[5] = (database_schedule.Time_Start.c_str())[4];
+	schedule[6] = (database_schedule.Time_End.c_str())[0];
+	schedule[7] = (database_schedule.Time_End.c_str())[1];
+	schedule[8] = (database_schedule.Time_End.c_str())[3];
+	schedule[9] = (database_schedule.Time_End.c_str())[4];
+
+	for (int i = 0; i < 10; i ++)
+	{
+		cout << schedule[i];
+	}
+	cout << endl;
+	
 	//Save Schedule Info To File:
 	ofstream outfile;
-	outfile.open("C:\\Users\\Bernard\\Documents\\Buffer_area\\Send_to_Client\\Scheduling_Info.SI");
-
-	BYTE *ptr_to_Scheduling_info_bytes = (BYTE*)(void*)(&device_schedule);
-	for (int i = 0; i < sizeof(device_schedule); i++)
-	{
-		outfile << ptr_to_Scheduling_info_bytes[i];
-	}
+	outfile.open("C:\\Users\\Bernard\\Documents\\Buffer_area\\Send_to_Client\\Scheduling_Info.SI",std::fstream::app);
+		for (int i = 0; i < 10; i++)
+		{
+			outfile << schedule[i];
+		}
 	outfile.close(); //close the file.
 	
 }
+
+char day_number(const string &day)
+{
+	if (day == "Monday")
+		return '0';
+	else if (day == "Tuesday")
+		return '1';
+	else if (day == "Wednesday")
+		return '2';
+	else if (day == "Thursday")
+		return '3';
+	else if (day == "Friday")
+		return '4';
+	else if (day == "Saturday")
+		return '5';
+	else if (day == "Sunday")
+		return '6';
+	else
+		return '8';
+}
+
+
+
+
+/*
+if (((Day <= 6) && (Day >= 0))
+&& ((Hour_Start <= 23) && (Hour_Start >= 0))
+&& ((Hour_End <= 23) && (Hour_End >= 0))
+&& ((Minute_Start <= 59) && (Minute_Start >= 0))
+&& ((Minute_End <= 59) && (Minute_End >= 0))
+&& (Hour_Start <= Hour_End)
+&& ((((Hour_Start==Hour_End)&&(Minute_Start <= Minute_End)))|| (Hour_Start != Hour_End)))
+{
+device_schedule.ID = database_schedule.Device_ID;
+//Make True according to Day Schedule
+for (int hour = Hour_Start; hour <= Hour_End; hour++)
+{
+if (Hour_Start != Hour_End) {
+if (hour == Hour_Start) {
+for (int minute = Minute_Start; minute <= 59; minute++) {
+device_schedule.hours_on_off[Day][hour][minute] = true;
+}
+}
+else if (hour == Hour_End) {
+for (int minute = 0; minute <= Minute_End; minute++)
+{
+device_schedule.hours_on_off[Day][hour][minute] = true;
+}
+}
+else { //Hour_Start < hour < Hour_End
+for (int minute = 0; minute <= 59; minute++) {
+device_schedule.hours_on_off[Day][hour][minute] = true;
+}
+}
+}
+else { //Hour_Start == Hour_End
+for (int minute = Minute_Start; minute <= Minute_End; minute++) {
+device_schedule.hours_on_off[Day][hour][minute] = true;
+}
+}
+}
+}
+else {
+//cout << "Invalid Database Entry!" << endl;
+//cout << "Day: " << Day << " Start Time: " << database_schedule.Time_Start << " End Time: " << database_schedule.Time_End << endl;
+return;
+}*/
