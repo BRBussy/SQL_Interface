@@ -132,7 +132,7 @@ void main(void)
 		try
 		{
 			stmt->execute("USE design_db;");
-			res = stmt->executeQuery("SELECT * FROM flags");
+			res = stmt->executeQuery("SELECT * FROM flags;");
 		}
 		catch (sql::SQLException e)
 		{
@@ -140,37 +140,32 @@ void main(void)
 			system("pause");
 			exit(1);
 		}
-		while (res->next())  //Iterate through to find Unread
+		while (res->next())
 		{
+			sql::SQLString schedule_modified_value = res->getString("Flag_Value");
 			sql::SQLString schedule_modified = res->getString("Flag_ID");
 			string schedule_modified_string = schedule_modified.c_str();
-			sql::SQLString schedule_modified_value = res->getString("Flag_Value");
-			string schedule_modified__value_string = schedule_modified_value.c_str();
+			string schedule_modified_value_string = schedule_modified_value.c_str();
 
 			if (schedule_modified_string == "schedule_modified") 
 			{
-				cout << "Found Modified Flag..." << endl;
-				if (schedule_modified__value_string == "yes")
+				cout << "Found Flag..." << endl;
+				if (schedule_modified_value_string == "yes")
 				{
-					cout << "schedule_is_modified" << endl;
+					cout << "schedule is modified" << endl;
 					Schedule_Changed = true;
-					break;
-				}
-				else
-				{
-					Schedule_Changed = false;
 				}
 			}
-			Schedule_Changed = false;
 		}
 		//------------IF there is new Scheduling Data to Process then Process It-------------
-		if (Schedule_Changed) {
+		if (Schedule_Changed) 
+		{
 			cout << "Reading and Processing Updated Schedule!" << endl << endl;
 			
 			try
 			{
 				stmt->execute("USE design_db;");
-				res = stmt->executeQuery("SELECT * FROM schedules");
+				//res = stmt->executeQuery("SELECT * FROM schedules");
 			}
 			catch (sql::SQLException e)
 			{
@@ -179,39 +174,34 @@ void main(void)
 				exit(1);
 			}
 
-			while (res->next())
-			{
-				data_base_scheduling_information database_schedule;
-				sql::SQLString Time_Start = res->getString("Time_Start");
-				sql::SQLString Time_End = res->getString("Time_End");
-				sql::SQLString Day = res->getString("Day");
-				string Time_Start_String = Time_Start.c_str();
-				string Time_End_String = Time_End.c_str();
-				string Day_String = Day.c_str();
+			//while (res->next())
+			//{
+			//	data_base_scheduling_information database_schedule;
+			//	sql::SQLString Time_Start = res->getString("Time_Start");
+			//	sql::SQLString Time_End = res->getString("Time_End");
+			//	sql::SQLString Day = res->getString("Day");
+			//	string Time_Start_String = Time_Start.c_str();
+			//	string Time_End_String = Time_End.c_str();
+			//	string Day_String = Day.c_str();
 
-				database_schedule.Time_Start = Time_Start_String;
-				database_schedule.Time_End = Time_End_String;
-				database_schedule.Day = Day_String;
-				database_schedule.Device_ID = res->getInt("Device_ID");
-				process_schedule_data(database_schedule);
-				//Mark Read
-				// UPDATE schedules SET Is_Read = 1 WHERE Day = 1;
-				ostringstream Mark_Read;
-				Mark_Read << "UPDATE schedules SET Is_Read = 1 WHERE "
-					<< "Day = '" << database_schedule.Day << "'"
-					<< " AND Time_Start = '" << Time_Start_String << "';";
-				try
-				{
-					stmt->execute("USE design_db;");
-					stmt->execute(Mark_Read.str().c_str());
-				}
-				catch (sql::SQLException e)
-				{
-					cout << "SQL error. Error message: " << e.what() << endl;
-					system("pause");
-					exit(1);
-				}
-			}
+			//	database_schedule.Time_Start = Time_Start_String;
+			//	database_schedule.Time_End = Time_End_String;
+			//	database_schedule.Day = Day_String;
+			//	database_schedule.Device_ID = res->getInt("Device_ID");
+			//	process_schedule_data(database_schedule);
+			//}
+			////Mark no longer modified
+			///*try
+			//{
+			//	//stmt->execute("USE design_db;");
+			//	//stmt->execute("UPDATE flags SET Flag_Value = 'no' WHERE Flag_ID = 'schedule_modified';");
+			//}
+			//catch (sql::SQLException e)
+			//{
+			//	cout << "SQL error. Error message: " << e.what() << endl;
+			//	system("pause");
+			//	exit(1);
+			//}
 			Schedule_Changed = false;
 		}
 		else 
