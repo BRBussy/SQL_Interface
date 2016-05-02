@@ -68,6 +68,7 @@ BYTE *read_Payload(const string &filename, const int &no_of_bytes_in_payload);
 template <class T> void rebuild_received_data(BYTE *Data_Payload, const int &Num_Bytes_in_Payload, T& rebuilt_variable);
 bool process_received_power_reading(const power_measurement &measurement_received);
 void process_schedule_data(const data_base_scheduling_information &database_schedule);
+void process_operating_mode(const string &operating_mode);
 char day_number(const string &day);
 
 void main(void)
@@ -155,6 +156,7 @@ void main(void)
 				if ((old_operating_mode == "NULL") || (old_operating_mode != new_operating_mode))
 				{
 					cout << "Operating Mode Changed!" << endl;
+					process_operating_mode(new_operating_mode);
 					old_operating_mode = new_operating_mode;
 				}
 			}
@@ -520,6 +522,16 @@ void process_schedule_data(const data_base_scheduling_information &database_sche
 		}
 	outfile.close(); //close the file.
 	
+}
+void process_operating_mode(const string &operating_mode)
+{
+	cout << "Operating Mode to Save is: " << operating_mode << endl;
+
+	//Save Schedule Info To File:
+	ofstream outfile;
+	outfile.open("C:\\Users\\Bernard\\Documents\\Buffer_area\\Send_to_Client\\Operating_Mode.CM", std::fstream::app);
+	outfile << operating_mode;
+	outfile.close(); //close the file.
 }
 
 char day_number(const string &day)
