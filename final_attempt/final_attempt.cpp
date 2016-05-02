@@ -65,7 +65,7 @@ string stmt_string;
 bool process_received_frames(void);
 BYTE *read_Payload(const string &filename, const int &no_of_bytes_in_payload);
 template <class T> void rebuild_received_data(BYTE *Data_Payload, const int &Num_Bytes_in_Payload, T& rebuilt_variable);
-void process_received_power_reading(const power_measurement &measurement_received);
+bool process_received_power_reading(const power_measurement &measurement_received);
 void process_schedule_data(const data_base_scheduling_information &database_schedule);
 char day_number(const string &day);
 
@@ -83,6 +83,9 @@ void main(void)
 	bool New_Data_Received = false;
 	//bool Server_Initialised = false;
 	bool loop = true;
+
+	power_measurement my_test_measurement;
+	cout << "Size is: " << sizeof(my_test_measurement) << endl;
 
 	//--------------SETUP CONNECTION TO DATABASE----------------------
 	//Try to get a driver to use
@@ -249,7 +252,8 @@ bool process_received_frames(void)
 				if (Data_Payload != NULL) {
 					power_measurement measurement_received;
 					rebuild_received_data(Data_Payload, filesize.QuadPart, measurement_received);
-					process_received_power_reading(measurement_received);
+					cout << endl << "Dodgy reading? -->"<< process_received_power_reading(measurement_received) << endl;
+					
 
 					if (remove(full_file_location.c_str()))
 						cout << "Error deleting file" << endl;
@@ -336,31 +340,86 @@ template <class T> void rebuild_received_data(BYTE *Data_Payload, const int &Num
 		ptr_to_rebuilt_variable_bytes[i] = Data_Payload[i];
 	}
 }
-void process_received_power_reading(const power_measurement &measurement_received)
+bool process_received_power_reading(const power_measurement &measurement_received)
 {
-	cout << "Contents of First Measurement: " << endl
+	int second_made = 0;
+	int minute_made = 0;
+	int year_made = 0;
+	int month_made = 5;
+	int day_made = 0;
+	int hour_made = 0;
+
+	if ((int)measurement_received.when_made.second > 59) {
+		return 0;
+	}
+	else
+	{
+		second_made = (int)measurement_received.when_made.second;
+	}
+	if ((int)measurement_received.when_made.minute > 59)
+	{
+		return 0;
+	}
+	else
+	{
+		minute_made = (int)measurement_received.when_made.minute;
+	}
+	if ((int)measurement_received.when_made.year > 2016)
+	{
+		return 0;
+	}
+	else
+	{
+		year_made = (int)measurement_received.when_made.year;
+	}
+	if ((int)measurement_received.when_made.month > 5)
+	{
+		return 0;
+	}
+	else
+	{
+		month_made = (int)measurement_received.when_made.month;
+	}
+	if ((int)measurement_received.when_made.dayOfMonth > 31)
+	{
+		return 0;
+	}
+	else
+	{
+		day_made = (int)measurement_received.when_made.dayOfMonth;
+	}
+	if ((int)measurement_received.when_made.hour > 31)
+	{
+		return 0;
+	}
+	else
+	{
+		hour_made = (int)measurement_received.when_made.hour;
+	}
+
+
+	cout <<endl<< "Contents of Measurement to Store to dB: " << endl
 		<< "ID: " << measurement_received.ID << endl
 		<< "Measurement: " << (float)measurement_received.measurement << endl
-		<< "Taken On: " << (int)measurement_received.when_made.year << "/"
-		<< (int)measurement_received.when_made.month << "/"
-		<< (int)measurement_received.when_made.dayOfMonth << " at "
-		<< (int)measurement_received.when_made.hour << ":"
-		<< (int)measurement_received.when_made.minute << ":"
-		<< (int)measurement_received.when_made.second << endl;	
+		<< "Taken On: " << (long long int)measurement_received.when_made.year << "/"
+		<< (long int)measurement_received.when_made.month << "/"
+		<< (long int)measurement_received.when_made.dayOfMonth << " at "
+		<< (long int)measurement_received.when_made.hour << ":"
+		<< (long int)measurement_received.when_made.minute << ":"
+		<< (long int)measurement_received.when_made.second << endl;	
 
 	ostringstream conversion_stream;
 	conversion_stream << "INSERT INTO `power_stats` (`Device_ID`, `Time_Recorded`, `Power_Reading`) VALUES  ("
 		<< "'" << measurement_received.ID << "', "
-
-		<< "'" << (int)measurement_received.when_made.year << "-"
-		<< (int)measurement_received.when_made.month << "-"
-		<< (int)measurement_received.when_made.dayOfMonth << " "
-		<< (int)measurement_received.when_made.hour << ":"
-		<< (int)measurement_received.when_made.minute << ":"
-		<< (short int)measurement_received.when_made.second << "'" << ", "
-
-		<< "'" << measurement_received.measurement << "');";
+		<< "'" << year_made << "-"
+		<< month_made << "-"
+		<< day_made << " "
+		<< hour_made << ":"
+		<< minute_made << ":"
+		<< second_made << "', '"
+		<< measurement_received.measurement << "');";
 	stmt_string = conversion_stream.str();
+	return 1;
 }
 void process_schedule_data(const data_base_scheduling_information &database_schedule)
 {
