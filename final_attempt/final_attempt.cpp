@@ -158,8 +158,7 @@ void main(void)
 				}
 				else
 				{
-					//Schedule_Changed = false;
-					//break;
+					Schedule_Changed = false;
 				}
 			}
 			Schedule_Changed = false;
