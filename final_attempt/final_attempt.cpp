@@ -61,6 +61,7 @@ const string server = "tcp://localhost:3306";
 const string username = "root";
 const string password = ""; // No password - NEVER DO THIS ON A PRODUCTION SERVER!
 string stmt_string;
+string old_operating_mode = "NULL";
 
 bool process_received_frames(void);
 BYTE *read_Payload(const string &filename, const int &no_of_bytes_in_payload);
@@ -83,6 +84,7 @@ void main(void)
 	bool New_Data_Received = false;
 	//bool Server_Initialised = false;
 	bool loop = true;
+
 
 	power_measurement my_test_measurement;
 	cout << "Size is: " << sizeof(my_test_measurement) << endl;
@@ -127,6 +129,36 @@ void main(void)
 				system("pause");
 				exit(1);
 			}
+		}
+		
+		
+		//------------CHECK FOR NEW OPERATING MODE TO PROCESS------------------------------
+		try
+		{
+			stmt->execute("USE design_db;");
+			res = stmt->executeQuery("SELECT * FROM flags");//res = stmt->executeQuery("SELECT * FROM schedules");
+		}
+		catch (sql::SQLException e)
+		{
+			cout << "SQL error. Error message: " << e.what() << endl;
+			system("pause");
+			exit(1);
+		}
+		while (res->next())
+		{
+			string flag_ID = (res->getString("Flag_ID")).c_str();
+			if (flag_ID == "operating_mode")
+			{
+				cout << "Found IT!" << endl;
+				string new_operating_mode = (res->getString("Flag_Value")).c_str();
+				cout << new_operating_mode << endl;
+				if ((old_operating_mode == "NULL") || (old_operating_mode != new_operating_mode))
+				{
+					cout << "Operating Mode Changed!" << endl;
+					old_operating_mode = new_operating_mode;
+				}
+			}
+			
 		}
 		//------------CHECK FOR NEW SCHEDULING DATA TO PROCESS------------------------------
 		try
