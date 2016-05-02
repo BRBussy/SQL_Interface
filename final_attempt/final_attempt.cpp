@@ -165,7 +165,7 @@ void main(void)
 			try
 			{
 				stmt->execute("USE design_db;");
-				//res = stmt->executeQuery("SELECT * FROM schedules");
+				res = stmt->executeQuery("SELECT * FROM schedules");
 			}
 			catch (sql::SQLException e)
 			{
