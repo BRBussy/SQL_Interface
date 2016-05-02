@@ -132,7 +132,7 @@ void main(void)
 		try
 		{
 			stmt->execute("USE design_db;");
-			res = stmt->executeQuery("SELECT * FROM schedules");
+			res = stmt->executeQuery("SELECT * FROM flags");
 		}
 		catch (sql::SQLException e)
 		{
@@ -142,11 +142,27 @@ void main(void)
 		}
 		while (res->next())  //Iterate through to find Unread
 		{
-			if (res->getInt("Is_Read") == 0) { //If one is Unread, The schedule has been changed
-				cout << "Detected that the Schedule has been changed!!" << endl;
-				Schedule_Changed = true;
-				break;
+			sql::SQLString schedule_modified = res->getString("Flag_ID");
+			string schedule_modified_string = schedule_modified.c_str();
+			sql::SQLString schedule_modified_value = res->getString("Flag_Value");
+			string schedule_modified__value_string = schedule_modified_value.c_str();
+
+			if (schedule_modified_string == "schedule_modified") 
+			{
+				cout << "Found Modified Flag..." << endl;
+				if (schedule_modified__value_string == "yes")
+				{
+					cout << "schedule_is_modified" << endl;
+					Schedule_Changed = true;
+					break;
+				}
+				else
+				{
+					//Schedule_Changed = false;
+					//break;
+				}
 			}
+			Schedule_Changed = false;
 		}
 		//------------IF there is new Scheduling Data to Process then Process It-------------
 		if (Schedule_Changed) {
